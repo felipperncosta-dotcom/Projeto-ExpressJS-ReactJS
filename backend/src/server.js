@@ -4,12 +4,14 @@ import cors from 'cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import authRoutes from './routes/auth.routes.js';
+import categoriasRoutes from './routes/categorias.routes.js';
 import { errorHandler, notFound } from './middlewares/erros.js';
 
 export const app = express();
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json({ limit: '64kb' }));
 app.use('/api/auth', authRoutes);
+app.use('/api/categorias', categoriasRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

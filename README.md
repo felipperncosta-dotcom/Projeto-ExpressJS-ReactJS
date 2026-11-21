@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 05 — Telas e sessão autenticada
+## Etapa 06 — Categorias
 
-Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. As funcionalidades financeiras serão implementadas nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, lançamentos e relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -56,7 +56,7 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 | 02 | Felippe | PostgreSQL: tabelas, restrições, pool e scripts — concluída |
 | 03 | Felippe | Cadastro, validações e dados padrão — concluída |
 | 04 | Felippe | Login JWT, identidade pelo token e limitação de tentativas — concluída |
-| 05 | Felippe | Telas de autenticação, contexto e rotas protegidas |
+| 05 | Felippe | Telas de autenticação, contexto e rotas protegidas — concluída |
 | 06 | Felippe | CRUD de categorias: API e interface |
 | 07 | Felippe | CRUD de fontes e destinos: API e interface |
 | 08 | Felippe | API de lançamentos, filtros, paginação e totais |
@@ -196,3 +196,22 @@ npm run build
 ```
 
 Os testes cobrem o cliente HTTP e a leitura da validade do token, com armazenamento e respostas simulados. A compilação verifica a integração dos componentes. A navegação visual e o fluxo completo de cadastro/login com PostgreSQL real ainda precisam ser validados em execução.
+
+## Categorias
+
+Após fazer login, abra **Categorias** no menu ou acesse `/categorias`. A tela permite listar, criar, editar e excluir categorias, com validação do formulário, erros por campo, carregamento e confirmação antes da exclusão. Uma falha ao carregar a lista oferece a ação Tentar novamente. As ações ficam desabilitadas enquanto uma alteração é enviada.
+
+Todas as rotas abaixo exigem `Authorization: Bearer <token>`:
+
+| Método | Rota | Resultado |
+|---|---|---|
+| GET | `/api/categorias` | 200 com categorias do usuário autenticado |
+| POST | `/api/categorias` | 201 com a categoria criada |
+| PUT | `/api/categorias/:id` | 200 com a categoria atualizada |
+| DELETE | `/api/categorias/:id` | 204, sem corpo |
+
+Criação e edição recebem `{ "nome": "Alimentação", "tipo": "saida" }`. O nome é obrigatório, tem até 60 caracteres e é salvo sem espaços nas extremidades. O tipo deve ser `entrada` ou `saida`. Nomes duplicados para o mesmo usuário e tipo retornam 409; dados inválidos retornam 400.
+
+O usuário vem exclusivamente do token. As consultas de lista, edição e exclusão filtram por esse usuário. Uma tentativa de editar ou excluir categoria inexistente ou de outra pessoa retorna 404. A API não permite excluir uma categoria com lançamentos vinculados nem mudar seu tipo enquanto estiver em uso (409). A restrição de chave estrangeira garante o bloqueio da exclusão no banco.
+
+Os testes HTTP de categorias verificam autenticação, validações, parâmetros de usuário nas consultas, respostas de duplicidade, edição, exclusão e bloqueio de categoria em uso. O banco é simulado: a persistência, as restrições reais e o fluxo visual ainda precisam ser verificados com PostgreSQL e navegador em execução.

@@ -45,3 +45,31 @@ input[aria-invalid="true"] { border-color: #a42c2c; }
   .auth-main { padding: 2rem 1.25rem; }
   .field-grid { grid-template-columns: 1fr; gap: 0; }
 }
+.app-shell { max-width: 72rem; margin: auto; padding: 2rem; }
+.app-header, .page-heading, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.app-header nav { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.app-header nav a { text-decoration: none; padding: .5rem 0; }
+.app-header nav a.active { border-bottom: 3px solid #245d46; }
+.page-heading h1 { font-size: 2.5rem; margin: .5rem 0; }
+.page-heading p { margin: 0; }
+.form-panel { border: 1px solid #c4d4ca; border-radius: 1rem; background: white; padding: 1.5rem; margin-bottom: 1.5rem; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.form-control label { display: block; font-weight: 600; margin-bottom: .4rem; }
+select { width: 100%; font: inherit; color: #203a30; border: 1px solid #a8b9af; border-radius: .5rem; padding: .75rem 2.5rem .75rem .75rem; appearance: none; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23203a30' stroke-width='2'/%3E%3C/svg%3E") no-repeat right .8rem center; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: .85rem .6rem; border-bottom: 1px solid #d6e0da; }
+th { font-size: .875rem; }
+.row-actions { white-space: nowrap; }
+.text-button { border: none; background: transparent; padding: .5rem; color: #245d46; font-weight: 600; cursor: pointer; }
+.text-button.danger { color: #a42c2c; }
+.tag { display: inline-block; padding: .2rem .6rem; border-radius: 1rem; font-size: .875rem; background: #e1eee6; }
+.tag.saida { background: #f6e5dc; color: #703c24; }
+.empty-state, .state-card { padding: 2rem 0; text-align: center; }
+@media (max-width: 760px) {
+  .app-shell { padding: 1.25rem; }
+  .app-header, .page-heading, .section-heading { flex-wrap: wrap; }
+  .app-header nav { order: 3; width: 100%; }
+  .form-row { grid-template-columns: 1fr; }
+  .panel-card { padding: 1.25rem; }
+}

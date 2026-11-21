@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { autenticar } from '../middlewares/autenticar.js';
 import { asyncHandler } from '../middlewares/erros.js';
 import { objetoBody, dataValida, idPositivo } from '../middlewares/validacao.js';
-import { valorEmCentavos } from '../models/utilitarios.js';
-import { listarLancamentos, buscarLancamento, validarCategoriaFonte, criarLancamento } from '../models/lancamentoModel.js';
+import { valorEmCentavos, dividirParcelas } from '../models/utilitarios.js';
+import { listarLancamentos, buscarLancamento, validarCategoriaFonte, criarLancamento, criarLancamentosTransacao, atualizarLancamento, removerLancamento } from '../models/lancamentoModel.js';
 
 const router = Router();
 router.use(autenticar);
@@ -45,8 +46,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   return res.json({ lancamento });
 }));
 
-router.post('/', objetoBody, asyncHandler(async (req, res) => {
-  const body = req.body;
+function validarDados(body, parcelasPadrao = 1, criacao = true) {
   const campos = {};
   const tipo = body.tipo;
   const descricao = typeof body.descricao === 'string' ? body.descricao.trim() : '';
@@ -60,28 +60,83 @@ router.post('/', objetoBody, asyncHandler(async (req, res) => {
   if (!dataValida(body.data)) campos.data = 'Informe uma data válida no formato AAAA-MM-DD.';
   if (!categoriaId) campos.categoria_id = 'Selecione uma categoria válida.';
   if (!fonteDestinoId) campos.fonte_destino_id = 'Selecione uma fonte ou destino válido.';
-  if ((body.total_parcelas !== undefined && idPositivo(body.total_parcelas) !== 1)
-    || (body.totalParcelas !== undefined && idPositivo(body.totalParcelas) !== 1)) {
-    campos.total_parcelas = 'O parcelamento será disponibilizado na próxima etapa. Use uma parcela.';
+  const informado = body.total_parcelas !== undefined ? body.total_parcelas
+    : body.totalParcelas !== undefined ? body.totalParcelas : parcelasPadrao;
+  const totalParcelas = idPositivo(informado);
+  if (!totalParcelas || totalParcelas > 48) campos.total_parcelas = 'Use de 1 a 48 parcelas.';
+  else if (criacao && centavos !== undefined && totalParcelas > centavos) {
+    campos.total_parcelas = 'Cada parcela precisa valer pelo menos um centavo.';
   }
-  if (Object.keys(campos).length) return res.status(400).json({ erro: 'Revise os campos informados.', campos });
+  if (body.total_parcelas !== undefined && body.totalParcelas !== undefined
+    && idPositivo(body.total_parcelas) !== idPositivo(body.totalParcelas)) {
+    campos.total_parcelas = 'Informe uma única quantidade de parcelas.';
+  }
+  return {
+    campos, centavos, totalParcelas,
+    dados: { tipo, descricao, data: body.data, categoria_id: categoriaId, fonte_destino_id: fonteDestinoId },
+  };
+}
 
-  const relacoes = await validarCategoriaFonte(req.usuarioId, categoriaId, fonteDestinoId);
-  if (!relacoes) return res.status(404).json({ erro: 'Categoria ou fonte/destino não encontrada.' });
+function validarCompatibilidade(tipo, relacoes, totalParcelas) {
+  const campos = {};
   if (relacoes.categoria_tipo !== tipo) campos.categoria_id = 'A categoria precisa ter o mesmo tipo do lançamento.';
   if (tipo === 'entrada' && relacoes.fonte_destino_tipo === 'cartao_credito') campos.fonte_destino_id = 'Entradas não podem ser registradas em cartão de crédito.';
   if (tipo === 'saida' && relacoes.fonte_destino_tipo === 'renda') campos.fonte_destino_id = 'Saídas precisam usar uma conta ou cartão de crédito.';
-  if (Object.keys(campos).length) return res.status(400).json({ erro: 'Categoria ou fonte incompatível.', campos });
+  if (totalParcelas > 1 && relacoes.fonte_destino_tipo !== 'cartao_credito') campos.total_parcelas = 'Parcelamento só é permitido em cartão de crédito.';
+  return campos;
+}
 
+router.post('/', objetoBody, asyncHandler(async (req, res) => {
+  const { campos, centavos, totalParcelas, dados } = validarDados(req.body);
+  if (Object.keys(campos).length) return res.status(400).json({ erro: 'Revise os campos informados.', campos });
+  const relacoes = await validarCategoriaFonte(req.usuarioId, dados.categoria_id, dados.fonte_destino_id);
+  if (!relacoes) return res.status(404).json({ erro: 'Categoria ou fonte/destino não encontrada.' });
+  const incompatibilidade = validarCompatibilidade(dados.tipo, relacoes, totalParcelas);
+  if (Object.keys(incompatibilidade).length) return res.status(400).json({ erro: 'Categoria, fonte ou parcelamento incompatível.', campos: incompatibilidade });
   try {
-    const lancamento = await criarLancamento(req.usuarioId, {
-      tipo, descricao, data: body.data, categoria_id: categoriaId, fonte_destino_id: fonteDestinoId,
-    }, centavos);
-    return res.status(201).json({ lancamentos: [lancamento] });
+    const lancamentos = totalParcelas === 1
+      ? [await criarLancamento(req.usuarioId, dados, centavos)]
+      : await criarLancamentosTransacao(req.usuarioId, dados, dividirParcelas(req.body.valor, totalParcelas), randomUUID());
+    return res.status(201).json({ lancamentos });
   } catch (erro) {
     if (erro.code === '23503') return res.status(404).json({ erro: 'Categoria ou fonte/destino não encontrada.' });
     throw erro;
   }
+}));
+
+router.put('/:id', objetoBody, asyncHandler(async (req, res) => {
+  const id = idPositivo(req.params.id);
+  if (!id) return res.status(404).json({ erro: 'Lançamento não encontrado.' });
+  const existente = await buscarLancamento(req.usuarioId, id);
+  if (!existente) return res.status(404).json({ erro: 'Lançamento não encontrado.' });
+  const { campos, centavos, totalParcelas, dados } = validarDados(req.body, existente.total_parcelas, false);
+  if (Object.keys(campos).length) return res.status(400).json({ erro: 'Revise os campos informados.', campos });
+  if (totalParcelas !== existente.total_parcelas) {
+    return res.status(400).json({ erro: 'A quantidade de parcelas não pode ser alterada.', campos: { total_parcelas: 'Mantenha a quantidade original de parcelas.' } });
+  }
+  const relacoes = await validarCategoriaFonte(req.usuarioId, dados.categoria_id, dados.fonte_destino_id);
+  if (!relacoes) return res.status(404).json({ erro: 'Categoria ou fonte/destino não encontrada.' });
+  const incompatibilidade = validarCompatibilidade(dados.tipo, relacoes, totalParcelas);
+  if (Object.keys(incompatibilidade).length) return res.status(400).json({ erro: 'Categoria, fonte ou parcelamento incompatível.', campos: incompatibilidade });
+  try {
+    const lancamento = await atualizarLancamento(req.usuarioId, id, dados, centavos);
+    if (!lancamento) return res.status(404).json({ erro: 'Lançamento não encontrado.' });
+    return res.json({ lancamento });
+  } catch (erro) {
+    if (erro.code === '23503') return res.status(404).json({ erro: 'Categoria ou fonte/destino não encontrada.' });
+    throw erro;
+  }
+}));
+
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const id = idPositivo(req.params.id);
+  if (!id) return res.status(404).json({ erro: 'Lançamento não encontrado.' });
+  if (req.query.todasParcelas !== undefined && !['true', 'false'].includes(req.query.todasParcelas)) {
+    return res.status(400).json({ erro: 'Use true ou false em todasParcelas.' });
+  }
+  const apagados = await removerLancamento(req.usuarioId, id, req.query.todasParcelas === 'true');
+  if (!apagados) return res.status(404).json({ erro: 'Lançamento não encontrado.' });
+  return res.status(204).end();
 }));
 
 export default router;

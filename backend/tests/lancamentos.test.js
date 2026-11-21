@@ -49,10 +49,10 @@ test('lançamentos HTTP com banco simulado', async (t) => {
         assert.equal((await enviar(method, caminho, undefined, false)).status, 401);
       }
     });
-    await t.test('valida dados e recusa parcelamento nesta etapa', async () => {
+    await t.test('valida dados e recusa quantidade de parcelas fora do limite', async () => {
       for (const body of [[], {}, { ...dados, valor: 1.001 }, { ...dados, data: '2026-02-30' },
         { ...dados, descricao: 'a'.repeat(121) }, { ...dados, categoria_id: true },
-        { ...dados, fonte_destino_id: [20] }, { ...dados, total_parcelas: 2 }]) {
+        { ...dados, fonte_destino_id: [20] }, { ...dados, total_parcelas: 49 }]) {
         assert.equal((await enviar('POST', '', body)).status, 400);
       }
     });

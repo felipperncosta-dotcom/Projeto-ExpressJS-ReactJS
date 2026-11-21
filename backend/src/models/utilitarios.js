@@ -33,3 +33,13 @@ export function centavosParaDecimal(centavos) {
   }
   return `${Math.floor(centavos / 100)}.${String(centavos % 100).padStart(2, '0')}`;
 }
+
+export function dividirParcelas(valor, quantidade) {
+  const total = valorEmCentavos(valor);
+  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > 48 || quantidade > total) {
+    throw new TypeError('Use de 1 a 48 parcelas, com pelo menos um centavo por parcela.');
+  }
+  const base = Math.floor(total / quantidade);
+  const sobra = total % quantidade;
+  return Array.from({ length: quantidade }, (_, indice) => base + (indice === 0 ? sobra : 0));
+}

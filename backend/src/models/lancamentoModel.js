@@ -85,3 +85,54 @@ export async function criarLancamento(usuarioId, dados, centavos) {
   );
   return lancamento;
 }
+export async function criarLancamentosTransacao(usuarioId, dados, parcelasCentavos, grupo) {
+  const cliente = await pool.connect();
+  try {
+    await cliente.query('BEGIN');
+    const criados = [];
+    for (let indice = 0; indice < parcelasCentavos.length; indice += 1) {
+      const { rows: [lancamento] } = await cliente.query(
+        `INSERT INTO lancamentos
+          (usuario_id, tipo, descricao, valor, data, categoria_id, fonte_destino_id,
+           parcela_atual, total_parcelas, grupo_parcelamento)
+         VALUES ($1, $2, $3, $4, $5::date, $6, $7, $8, $9, $10)
+         RETURNING id, tipo, descricao, valor, to_char(data, 'YYYY-MM-DD') AS data,
+           categoria_id, fonte_destino_id, parcela_atual, total_parcelas, grupo_parcelamento`,
+        [usuarioId, dados.tipo, dados.descricao, centavosParaDecimal(parcelasCentavos[indice]),
+          dados.data, dados.categoria_id, dados.fonte_destino_id, indice + 1,
+          parcelasCentavos.length, grupo],
+      );
+      criados.push(lancamento);
+    }
+    await cliente.query('COMMIT');
+    return criados;
+  } catch (erro) {
+    await cliente.query('ROLLBACK');
+    throw erro;
+  } finally {
+    cliente.release();
+  }
+}
+
+export async function atualizarLancamento(usuarioId, id, dados, centavos) {
+  const { rows: [lancamento] } = await pool.query(
+    `UPDATE lancamentos SET tipo = $1, descricao = $2, valor = $3, data = $4::date,
+       categoria_id = $5, fonte_destino_id = $6
+     WHERE id = $7 AND usuario_id = $8
+     RETURNING id, tipo, descricao, valor, to_char(data, 'YYYY-MM-DD') AS data,
+       categoria_id, fonte_destino_id, parcela_atual, total_parcelas, grupo_parcelamento`,
+    [dados.tipo, dados.descricao, centavosParaDecimal(centavos), dados.data,
+      dados.categoria_id, dados.fonte_destino_id, id, usuarioId],
+  );
+  return lancamento ?? null;
+}
+
+export async function removerLancamento(usuarioId, id, todasParcelas) {
+  const existente = await buscarLancamento(usuarioId, id);
+  if (!existente) return null;
+  const grupo = todasParcelas && existente.grupo_parcelamento;
+  const resultado = grupo
+    ? await pool.query('DELETE FROM lancamentos WHERE usuario_id = $1 AND grupo_parcelamento = $2', [usuarioId, grupo])
+    : await pool.query('DELETE FROM lancamentos WHERE usuario_id = $1 AND id = $2', [usuarioId, id]);
+  return resultado.rowCount;
+}

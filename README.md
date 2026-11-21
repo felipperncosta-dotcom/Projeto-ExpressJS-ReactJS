@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 08 — API de lançamentos simples
+## Etapa 09 — Parcelamento, edição e exclusão
 
-Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. A API já permite criar e consultar lançamentos simples. Parcelamento, edição/exclusão, tela de lançamentos e relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. A API permite criar, consultar, editar e excluir lançamentos, inclusive compras parceladas. A tela de lançamentos e os relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -59,7 +59,7 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 | 05 | Felippe | Telas de autenticação, contexto e rotas protegidas — concluída |
 | 06 | Felippe | CRUD de categorias: API e interface — concluída |
 | 07 | Felippe | CRUD de fontes e destinos: API e interface — concluída |
-| 08 | Felippe | API de lançamentos, filtros, paginação e totais |
+| 08 | Felippe | API de lançamentos, filtros, paginação e totais — concluída |
 | 09 | Felippe | Parcelamento, transação, edição e exclusão |
 | 10 | Felippe | Tela de lançamentos, testes e instruções de continuidade |
 | 11 | Rafael | API de relatórios por categoria |
@@ -250,7 +250,7 @@ A tela confirma a exclusão, bloqueia ações durante o envio e distingue lista 
 
 ## Lançamentos simples — API
 
-Todas as rotas exigem token. A tela será implementada na etapa 10; parcelamento, edição e exclusão entram na etapa 09.
+Todas as rotas exigem token. A tela será implementada na etapa 10. Parcelamento, edição e exclusão estão documentados abaixo.
 
 | Método | Rota | Finalidade |
 |---|---|---|
@@ -283,6 +283,30 @@ O período padrão é o mês corrente. A primeira página é 1; o limite padrão
 
 Os totais usam SUM no PostgreSQL e consideram todos os registros que atendem aos filtros, independentemente da página. O saldo também é subtraído no PostgreSQL usando NUMERIC; os valores monetários são devolvidos como strings decimais, sem conversão para ponto flutuante no JavaScript.
 
-Nesta etapa, apenas uma parcela é aceita. Enviar total_parcelas maior que 1 retorna 400 explicitamente. Os campos de parcela permanecem nos registros para evolução na etapa seguinte.
+Sem total_parcelas, a criação usa uma parcela. Para compras no cartão, total_parcelas aceita de 1 a 48, conforme as regras abaixo.
 
 Os testes verificam valores em centavos, datas reais, autenticação, posse das relações, compatibilidade, criação, detalhe, filtros e paginação por HTTP com banco simulado. Persistência real e execução das consultas SQL ainda precisam ser verificadas com PostgreSQL.
+
+## Parcelamento, edição e exclusão
+
+Para criar uma compra parcelada, envie o mesmo corpo do POST de lançamentos, usando uma categoria de saída, um cartão próprio em fonte_destino_id e `total_parcelas` entre 2 e 48. O campo valor representa o total da compra, não o valor de uma parcela. Parcelamento não é permitido em contas ou rendas.
+
+Uma compra de 100.00 em três parcelas gera 33.34, 33.33 e 33.33. A divisão usa centavos inteiros e coloca toda a sobra na primeira parcela. Cada parcela precisa valer pelo menos um centavo. O servidor gera um UUID comum em grupo_parcelamento e numera parcela_atual de 1 até total_parcelas. Esses identificadores não são definidos pelo cliente.
+
+Todas as parcelas são inseridas usando a mesma conexão e transação: BEGIN, inserções e COMMIT. Em caso de falha, o model executa ROLLBACK e libera a conexão. Lançamentos simples continuam usando uma única inserção atômica.
+
+As parcelas guardam a data original da compra. Portanto, a listagem e os totais por período usam essa data, somando as parcelas registradas da compra. A previsão mensal das faturas será calculada posteriormente com a data da compra e o número de cada parcela; não deve ser confundida com o relatório por data da movimentação.
+
+| Método | Rota | Comportamento |
+|---|---|---|
+| PUT | `/api/lancamentos/:id` | Edita somente o lançamento selecionado; retorna 200 |
+| DELETE | `/api/lancamentos/:id` | Exclui somente o lançamento selecionado; retorna 204 |
+| DELETE | `/api/lancamentos/:id?todasParcelas=true` | Exclui as parcelas restantes do mesmo grupo e usuário; retorna 204 |
+
+O PUT recebe tipo, descrição, valor, data, categoria e fonte/destino com as mesmas validações de criação. Na edição, valor significa o valor do lançamento/parcela selecionado. A quantidade de parcelas não pode mudar; se omitida, mantém-se a quantidade existente. O grupo e o número da parcela também são preservados. Para uma parcela de compra parcelada, a fonte/destino precisa continuar sendo um cartão do usuário.
+
+Alterar uma parcela não redistribui os valores das demais. Excluir uma parcela não renumera as restantes. Excluir com todasParcelas=true em um lançamento sem grupo remove apenas esse lançamento. O parâmetro aceita somente true ou false. A confirmação e a escolha entre exclusão individual e do grupo serão incluídas na tela da etapa 10.
+
+Editar/excluir registros inexistentes ou de terceiros retorna 404; relações incompatíveis e tentativas de mudar a quantidade retornam 400. Todas as alterações e exclusões filtram pelo usuário do token.
+
+Os testes cobrem soma exata de centavos para 1 a 48 parcelas, sobra na primeira, validações, uso da mesma conexão para as inserções, COMMIT/ROLLBACK, liberação da conexão, edição individual, preservação de metadados e exclusão individual/do grupo. As consultas são simuladas; a atomicidade e a persistência reais ainda precisam de validação em PostgreSQL.

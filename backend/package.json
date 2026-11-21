@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "db:schema": "node scripts/schema.js"
+    "db:schema": "node scripts/schema.js",
+    "test": "node --test"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

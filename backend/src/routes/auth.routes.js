@@ -1,11 +1,23 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { cpfValido } from '../models/utilitarios.js';
-import { criarUsuarioComPadroes } from '../models/usuarioModel.js';
+import { criarUsuarioComPadroes, buscarUsuarioPorEmail, buscarUsuarioPublico } from '../models/usuarioModel.js';
 import { emailValido, objetoBody, senhaValida } from '../middlewares/validacao.js';
 import { asyncHandler } from '../middlewares/erros.js';
 
+import rateLimit from 'express-rate-limit';
+import { criarToken } from '../config/jwt.js';
+import { autenticar } from '../middlewares/autenticar.js';
+
 const router = Router();
+const hashFalso = bcrypt.hashSync('comparacao-para-usuario-inexistente', 10);
+const limitarLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { erro: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+});
 
 router.post('/cadastro', objetoBody, asyncHandler(async (req, res) => {
   const campos = {};
@@ -47,5 +59,30 @@ router.post('/cadastro', objetoBody, asyncHandler(async (req, res) => {
   }
 }));
 
+
+router.post('/login', limitarLogin, objetoBody, asyncHandler(async (req, res) => {
+  const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const senha = typeof req.body.senha === 'string' ? req.body.senha : '';
+  if (!email || email.length > 160 || !emailValido(email) || !senha
+    || Buffer.byteLength(senha, 'utf8') > 72) {
+    return res.status(400).json({ erro: 'Informe e-mail válido e senha de até 72 bytes.' });
+  }
+
+  const usuario = await buscarUsuarioPorEmail(email);
+  const senhaCorreta = await bcrypt.compare(senha, usuario?.senha_hash ?? hashFalso);
+  if (!usuario || !senhaCorreta) {
+    return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });
+  }
+  return res.json({
+    token: criarToken(usuario.id),
+    usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email },
+  });
+}));
+
+router.get('/me', autenticar, asyncHandler(async (req, res) => {
+  const usuario = await buscarUsuarioPublico(req.usuarioId);
+  if (!usuario) return res.status(404).json({ erro: 'Usuário não encontrado.' });
+  return res.json({ usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email } });
+}));
 
 export default router;

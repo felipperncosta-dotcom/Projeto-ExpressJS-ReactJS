@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 
 // A conexão é substituída por um cliente simulado: estes testes não validam o PostgreSQL.
 process.env.DATABASE_URL = 'postgres://teste:teste@127.0.0.1:1/teste';
+process.env.JWT_SECRET = 'segredo-exclusivo-dos-testes-de-cadastro-123';
 const { app } = await import('../src/server.js');
 const { pool } = await import('../src/config/database.js');
 const { cpfValido } = await import('../src/models/utilitarios.js');

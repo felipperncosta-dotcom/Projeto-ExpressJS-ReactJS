@@ -35,3 +35,17 @@ export async function criarUsuarioComPadroes({ nome, email, cpf, senhaHash }) {
     cliente.release();
   }
 }
+
+export async function buscarUsuarioPorEmail(email) {
+  const { rows: [usuario] } = await pool.query(
+    'SELECT id, nome, email, senha_hash FROM usuarios WHERE email = $1', [email],
+  );
+  return usuario ?? null;
+}
+
+export async function buscarUsuarioPublico(id) {
+  const { rows: [usuario] } = await pool.query(
+    'SELECT id, nome, email FROM usuarios WHERE id = $1', [id],
+  );
+  return usuario ?? null;
+}

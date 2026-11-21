@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 03 — Cadastro de usuários
+## Etapa 04 — Login e autenticação
 
-Servidor Express, tela inicial React/Vite, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login e funcionalidades financeiras serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, tela inicial React/Vite, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. As funcionalidades financeiras serão implementadas nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -20,7 +20,7 @@ npm ci
 npm run dev
 ```
 
-A API inicia na porta 3000. O cadastro está disponível em POST /api/auth/cadastro; URLs não implementadas retornam JSON com status 404. DATABASE_URL configura a conexão com o PostgreSQL. Substitua JWT_SECRET antes de implementar autenticação. Não publique `.env`.
+A API inicia na porta 3000. O cadastro está disponível em POST /api/auth/cadastro; URLs não implementadas retornam JSON com status 404. DATABASE_URL configura a conexão com o PostgreSQL. Configure JWT_SECRET com um segredo próprio de pelo menos 32 bytes; o valor de exemplo não é aceito pela API. Não publique `.env`.
 
 Em outro terminal, dentro de `frontend`:
 
@@ -54,7 +54,7 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 |---|---|---|
 | 01 | Felippe | Estrutura inicial — concluída |
 | 02 | Felippe | PostgreSQL: tabelas, restrições, pool e scripts — concluída |
-| 03 | Felippe | Cadastro, validações e dados padrão |
+| 03 | Felippe | Cadastro, validações e dados padrão — concluída |
 | 04 | Felippe | Login JWT, isolamento e limitação de tentativas |
 | 05 | Felippe | Telas de autenticação, contexto e rotas protegidas |
 | 06 | Felippe | CRUD de categorias: API e interface |
@@ -134,3 +134,34 @@ A unicidade é garantida pelas restrições do PostgreSQL, não por consulta pr�
 ## Testes do cadastro
 
 Dentro de `backend`, execute `npm test`. Os testes fazem requisições HTTP locais e usam um cliente de banco simulado para verificar validações, normalização, hash, respostas de conflito e comandos de transação. Não acessam nem alteram seu banco. A persistência real, as restrições SQL e concorrência ainda precisam de testes com PostgreSQL.
+
+## Login e autenticação
+
+Antes de iniciar a API, defina JWT_SECRET em `backend/.env` com um segredo próprio de pelo menos 32 bytes. O servidor recusa segredo ausente, curto ou igual ao placeholder do exemplo. Uma forma de gerar um valor aleatório é executar:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Copie o resultado para JWT_SECRET e não o publique no Git.
+
+| Método | Rota | Finalidade |
+|---|---|---|
+| POST | `/api/auth/login` | Autenticar por e-mail e senha; retornar token e usuário |
+| GET | `/api/auth/me` | Consultar id, nome e e-mail do usuário indicado pelo token |
+
+Exemplo de corpo do login:
+
+```json
+{ "email": "pessoa@exemplo.com", "senha": "Senha1234" }
+```
+
+O login normaliza o e-mail e compara a senha com bcrypt. Credenciais incorretas retornam 401 com a mesma mensagem, independentemente de o e-mail existir. Campos inválidos retornam 400. Nenhuma resposta inclui senha ou hash.
+
+O token usa HS256 e expira em uma hora. Envie `Authorization: Bearer <token>` ao consultar `/api/auth/me`. Token ausente, inválido, expirado, sem expiração ou com algoritmo diferente retorna 401. Usuário removido retorna 404 nessa consulta. A identidade fica em `req.usuarioId` e vem exclusivamente do token, não do corpo ou da URL.
+
+O login aceita até dez requisições por endereço IP a cada quinze minutos; a seguinte retorna 429 com mensagem e cabeçalho Retry-After. Esse contador é mantido em memória e reinicia com o servidor. A configuração atual corresponde à execução local, sem proxy intermediário.
+
+O middleware de autenticação será aplicado às rotas financeiras quando elas forem criadas. O isolamento completo dos registros será validado nessas etapas. Logout e retorno ao login após expiração serão implementados no frontend na etapa 05; o logout descartará o token no cliente.
+
+Os testes de autenticação fazem HTTP local com banco simulado: verificam login, expiração, assinatura e algoritmo, identificação pelo token, rejeição de credenciais e limitação de tentativas. Execute `npm test` dentro de `backend`. A validação com PostgreSQL real permanece pendente.

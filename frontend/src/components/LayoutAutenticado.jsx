@@ -9,6 +9,7 @@ export default function LayoutAutenticado() {
       <nav aria-label="Navegação principal">
         <NavLink to="/" end>Início</NavLink>
         <NavLink to="/categorias">Categorias</NavLink>
+        <NavLink to="/fontes-destinos">Contas e cartões</NavLink>
       </nav>
       <button className="button" onClick={logout}>Sair</button>
     </header>

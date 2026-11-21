@@ -73,3 +73,9 @@ th { font-size: .875rem; }
   .form-row { grid-template-columns: 1fr; }
   .panel-card { padding: 1.25rem; }
 }
+.form-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.form-row-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.check-control { display: flex; gap: .6rem; align-items: center; margin: 1rem 0; }
+.check-control input { width: auto; }
+td small { display: block; color: #50645b; font-size: .875rem; }
+@media (max-width: 760px) { .form-row-three { grid-template-columns: 1fr; } }

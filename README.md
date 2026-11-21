@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 06 — Categorias
+## Etapa 07 — Contas, rendas e cartões
 
-Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, lançamentos e relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. Lançamentos e relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -57,7 +57,7 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 | 03 | Felippe | Cadastro, validações e dados padrão — concluída |
 | 04 | Felippe | Login JWT, identidade pelo token e limitação de tentativas — concluída |
 | 05 | Felippe | Telas de autenticação, contexto e rotas protegidas — concluída |
-| 06 | Felippe | CRUD de categorias: API e interface |
+| 06 | Felippe | CRUD de categorias: API e interface — concluída |
 | 07 | Felippe | CRUD de fontes e destinos: API e interface |
 | 08 | Felippe | API de lançamentos, filtros, paginação e totais |
 | 09 | Felippe | Parcelamento, transação, edição e exclusão |
@@ -215,3 +215,35 @@ Criação e edição recebem `{ "nome": "Alimentação", "tipo": "saida" }`. O n
 O usuário vem exclusivamente do token. As consultas de lista, edição e exclusão filtram por esse usuário. Uma tentativa de editar ou excluir categoria inexistente ou de outra pessoa retorna 404. A API não permite excluir uma categoria com lançamentos vinculados nem mudar seu tipo enquanto estiver em uso (409). A restrição de chave estrangeira garante o bloqueio da exclusão no banco.
 
 Os testes HTTP de categorias verificam autenticação, validações, parâmetros de usuário nas consultas, respostas de duplicidade, edição, exclusão e bloqueio de categoria em uso. O banco é simulado: a persistência, as restrições reais e o fluxo visual ainda precisam ser verificados com PostgreSQL e navegador em execução.
+
+## Contas, rendas e cartões
+
+A tela `/fontes-destinos`, acessível por **Contas e cartões** no menu, permite listar, criar, editar e excluir cadastros. O formulário mostra os campos de fechamento, vencimento e limite quando o tipo é cartão. Contas podem ser marcadas como reserva de emergência. A marcação ainda não calcula saldo: esse indicador será implementado na etapa de saúde financeira.
+
+Todas as rotas exigem token e usam o usuário identificado por ele:
+
+| Método | Rota | Resultado |
+|---|---|---|
+| GET | `/api/fontes-destinos` | 200 com fontesDestinos do usuário |
+| POST | `/api/fontes-destinos` | 201 com fonteDestino criada |
+| PUT | `/api/fontes-destinos/:id` | 200 com fonteDestino atualizada |
+| DELETE | `/api/fontes-destinos/:id` | 204 sem corpo |
+
+Exemplo de cartão:
+
+```json
+{
+  "nome": "Visa",
+  "tipo": "cartao_credito",
+  "dia_fechamento": 25,
+  "dia_vencimento": 5,
+  "limite": "3000.50",
+  "reserva": false
+}
+```
+
+O nome tem até 60 caracteres e é único por usuário. Os tipos aceitos são `renda`, `conta` e `cartao_credito`. Cartões exigem dias inteiros de 1 a 31 e limite positivo, com até duas casas decimais e máximo de 9.999.999.999,99 (capacidade do NUMERIC(12,2)). A API usa ponto decimal; a interface aplica máscara brasileira e faz a conversão. Tipos booleanos e arrays não são aceitos como valores monetários ou dias.
+
+Para renda e conta, os campos específicos de cartão são gravados como nulos. `reserva` é booleano e só pode ser verdadeiro para contas. Dados inválidos retornam 400; nome duplicado retorna 409 com erro no campo nome. Recursos inexistentes ou pertencentes a outro usuário retornam 404 em edição/exclusão. Cadastros com lançamentos associados não podem ser excluídos nem ter seu tipo alterado (409).
+
+A tela confirma a exclusão, bloqueia ações durante o envio e distingue lista vazia de falha de carregamento, com opção de tentar novamente. Os testes HTTP usam banco simulado e cobrem validações, criação dos três tipos, duplicidade, edição, exclusão e parâmetros de isolamento. Há também teste da máscara monetária. A validação com PostgreSQL real e navegador permanece pendente.

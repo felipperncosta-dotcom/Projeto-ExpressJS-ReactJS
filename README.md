@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 01 — Estrutura inicial
+## Etapa 02 — Banco de dados
 
-Servidor Express e tela inicial React/Vite. Banco, autenticação e funcionalidades financeiras serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, tela inicial React/Vite, schema PostgreSQL e pool de conexões. Autenticação e funcionalidades financeiras serão implementadas nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -20,7 +20,7 @@ npm ci
 npm run dev
 ```
 
-A API inicia na porta 3000. Nesta etapa todas as URLs retornam JSON com status 404, pois ainda não há rotas de negócio. DATABASE_URL está reservada para a próxima etapa. Substitua JWT_SECRET antes de implementar autenticação. Não publique `.env`.
+A API inicia na porta 3000. Nesta etapa todas as URLs retornam JSON com status 404, pois ainda não há rotas de negócio. DATABASE_URL configura a conexão com o PostgreSQL. Substitua JWT_SECRET antes de implementar autenticação. Não publique `.env`.
 
 Em outro terminal, dentro de `frontend`:
 
@@ -33,12 +33,13 @@ Abra o endereço exibido pelo Vite, normalmente http://localhost:5173. Use `npm 
 
 ## Estrutura
 
-- `backend/database`: schema e seed futuros.
+- `backend/database/schema.sql`: tabelas, restrições e índices. O seed será incluído posteriormente.
 - `backend/src/server.js`: inicialização do Express.
 - `backend/src/routes`: rotas e controladores.
 - `backend/src/models`: persistência e regras de negócio.
 - `backend/src/middlewares`: autenticação, validação e erros.
 - `backend/src/config`: configurações e pool do banco.
+- `backend/scripts/schema.js`: aplica o schema em uma transação.
 - `frontend/src/components`: telas e componentes.
 - `frontend/src/contexts`: estado compartilhado.
 - `frontend/src/services`: cliente da API.
@@ -51,23 +52,54 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 
 | Etapa | Responsável | Entrega |
 |---|---|---|
-| 01 | Felippe | Estrutura inicial |
-| 02 | Rafael | Banco e restrições |
-| 03 | Felippe | Cadastro e validações |
-| 04 | Rafael | Login e JWT |
-| 05 | Felippe | Telas de cadastro e login |
-| 06 | Rafael | Sessão e rotas protegidas |
-| 07 | Felippe | API de categorias |
-| 08 | Rafael | Tela de categorias |
-| 09 | Felippe | API de fontes e destinos |
-| 10 | Rafael | Tela de fontes e destinos |
-| 11 | Felippe | API de lançamentos e parcelas |
-| 12 | Rafael | Tela de lançamentos |
-| 13 | Felippe | Relatório por categoria |
-| 14 | Rafael | Relatório por fonte/destino |
-| 15 | Felippe | API e cálculo de faturas |
-| 16 | Rafael | Tela de faturas e painel |
-| 17 | Felippe | Indicadores de saúde financeira |
-| 18 | Rafael | Tela de saúde financeira |
-| 19 | Felippe | Testes de integração e correções |
-| 20 | Rafael | Documentação e validação da entrega |
+| 01 | Felippe | Estrutura inicial — concluída |
+| 02 | Felippe | PostgreSQL: tabelas, restrições, pool e scripts |
+| 03 | Felippe | Cadastro, validações e dados padrão |
+| 04 | Felippe | Login JWT, isolamento e limitação de tentativas |
+| 05 | Felippe | Telas de autenticação, contexto e rotas protegidas |
+| 06 | Felippe | CRUD de categorias: API e interface |
+| 07 | Felippe | CRUD de fontes e destinos: API e interface |
+| 08 | Felippe | API de lançamentos, filtros, paginação e totais |
+| 09 | Felippe | Parcelamento, transação, edição e exclusão |
+| 10 | Felippe | Tela de lançamentos, testes e instruções de continuidade |
+| 11 | Rafael | API de relatórios por categoria |
+| 12 | Rafael | Tela por categoria, incluindo redução a zero |
+| 13 | Rafael | Relatório por fonte/destino com tabelas e gráficos |
+| 14 | Rafael | Cálculo de faturas e limites |
+| 15 | Rafael | Tela de faturas e datas brasileiras |
+| 16 | Rafael | Painel mensal |
+| 17 | Rafael | Indicadores financeiros e revisão da reserva/projeção |
+| 18 | Rafael | Tela de saúde financeira e dicas |
+| 19 | Rafael | Seed, testes integrados e correções |
+| 20 | Rafael | Documentação, regras das dicas e roteiro de apresentação |
+
+## Criar o banco de desenvolvimento
+
+Com Docker Desktop instalado e em execução, na raiz do projeto:
+
+```powershell
+docker compose up -d --wait
+```
+
+O serviço cria o banco `financas` no PostgreSQL 16 e mantém seus dados em um volume. A porta 5432 fica acessível somente pela máquina local. As credenciais do Compose são exclusivas para desenvolvimento. Se a porta já estiver ocupada, ajuste o mapeamento e DATABASE_URL juntos.
+
+Dentro de `backend`, copie `.env.example` para `.env` se ainda não tiver feito isso. Depois de instalar as dependências, execute:
+
+```powershell
+npm run db:schema
+```
+
+O script cria as tabelas em uma única transação: se alguma instrução falhar, nenhuma alteração dessa execução permanece. Execute em um banco vazio. Rodar novamente retorna erro de tabela existente; o script não apaga tabelas nem registros e não é um sistema de migrations.
+
+Como alternativa ao Docker, crie um banco vazio no PostgreSQL e configure DATABASE_URL com a conexão correspondente antes de executar o mesmo script.
+
+### Modelo de dados
+
+- `usuarios`: nome, e-mail e CPF únicos, hash da senha e data de criação.
+- `categorias`: pertencem a um usuário, com tipo entrada/saída e nome único por usuário e tipo.
+- `fontes_destinos`: rendas, contas e cartões; cartões exigem limite positivo e dias de fechamento/vencimento. Somente contas podem ser reservas.
+- `lancamentos`: usuário, categoria, fonte/destino, valor positivo, data e informações de parcelamento. Valores usam NUMERIC(12,2); parcelas vão de 1 a 48.
+
+Chaves estrangeiras impedem referências inexistentes. Categorias e fontes/destinos usados por lançamentos não podem ser excluídos. A API verificará a posse das relações e a compatibilidade dos tipos nas etapas de cadastro de lançamentos.
+
+O pool usa até dez conexões e espera até cinco segundos para conectar. Os dados de demonstração serão incluídos na etapa 19.

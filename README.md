@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 07 — Contas, rendas e cartões
+## Etapa 08 — API de lançamentos simples
 
-Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. Lançamentos e relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. A API já permite criar e consultar lançamentos simples. Parcelamento, edição/exclusão, tela de lançamentos e relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -58,7 +58,7 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 | 04 | Felippe | Login JWT, identidade pelo token e limitação de tentativas — concluída |
 | 05 | Felippe | Telas de autenticação, contexto e rotas protegidas — concluída |
 | 06 | Felippe | CRUD de categorias: API e interface — concluída |
-| 07 | Felippe | CRUD de fontes e destinos: API e interface |
+| 07 | Felippe | CRUD de fontes e destinos: API e interface — concluída |
 | 08 | Felippe | API de lançamentos, filtros, paginação e totais |
 | 09 | Felippe | Parcelamento, transação, edição e exclusão |
 | 10 | Felippe | Tela de lançamentos, testes e instruções de continuidade |
@@ -247,3 +247,42 @@ O nome tem até 60 caracteres e é único por usuário. Os tipos aceitos são `r
 Para renda e conta, os campos específicos de cartão são gravados como nulos. `reserva` é booleano e só pode ser verdadeiro para contas. Dados inválidos retornam 400; nome duplicado retorna 409 com erro no campo nome. Recursos inexistentes ou pertencentes a outro usuário retornam 404 em edição/exclusão. Cadastros com lançamentos associados não podem ser excluídos nem ter seu tipo alterado (409).
 
 A tela confirma a exclusão, bloqueia ações durante o envio e distingue lista vazia de falha de carregamento, com opção de tentar novamente. Os testes HTTP usam banco simulado e cobrem validações, criação dos três tipos, duplicidade, edição, exclusão e parâmetros de isolamento. Há também teste da máscara monetária. A validação com PostgreSQL real e navegador permanece pendente.
+
+## Lançamentos simples — API
+
+Todas as rotas exigem token. A tela será implementada na etapa 10; parcelamento, edição e exclusão entram na etapa 09.
+
+| Método | Rota | Finalidade |
+|---|---|---|
+| POST | `/api/lancamentos` | Criar lançamento simples; retorna 201 com array lancamentos |
+| GET | `/api/lancamentos` | Listar com filtros, paginação e totais |
+| GET | `/api/lancamentos/:id` | Consultar lançamento próprio; retorna 404 se inexistente ou de terceiro |
+
+Exemplo de criação (substitua os IDs por cadastros do usuário autenticado):
+
+```json
+{
+  "tipo": "saida",
+  "descricao": "Mercado",
+  "valor": "50.25",
+  "data": "2026-11-21",
+  "categoria_id": 10,
+  "fonte_destino_id": 20
+}
+```
+
+A descrição é obrigatória e tem até 120 caracteres. O valor é positivo, tem no máximo duas casas decimais e respeita o limite do NUMERIC(12,2); use ponto como separador. A conversão em centavos evita arredondar entradas como `1.001`. Datas seguem AAAA-MM-DD e precisam existir no calendário. IDs devem ser inteiros positivos.
+
+Categoria e fonte/destino devem pertencer ao usuário do token. A categoria deve ter o mesmo tipo do lançamento. Entradas não podem usar cartão e saídas não podem usar uma fonte do tipo renda. Relações inexistentes ou de terceiros retornam 404; incompatibilidades e campos inválidos retornam 400 com detalhes. O usuário nunca é obtido do corpo da requisição.
+
+### Filtros e paginação
+
+Exemplo: `/api/lancamentos?inicio=2026-11-01&fim=2026-11-30&tipo=saida&categoriaId=10&fonteDestinoId=20&pagina=2&limite=10`.
+
+O período padrão é o mês corrente. A primeira página é 1; o limite padrão é 20 e pode variar de 1 a 100. O resultado contém `lancamentos`, `pagina`, `limite`, `total`, `totalPaginas`, `totalEntradas`, `totalSaidas` e `saldo`. A ordenação é por data decrescente e, em seguida, id decrescente.
+
+Os totais usam SUM no PostgreSQL e consideram todos os registros que atendem aos filtros, independentemente da página. O saldo também é subtraído no PostgreSQL usando NUMERIC; os valores monetários são devolvidos como strings decimais, sem conversão para ponto flutuante no JavaScript.
+
+Nesta etapa, apenas uma parcela é aceita. Enviar total_parcelas maior que 1 retorna 400 explicitamente. Os campos de parcela permanecem nos registros para evolução na etapa seguinte.
+
+Os testes verificam valores em centavos, datas reais, autenticação, posse das relações, compatibilidade, criação, detalhe, filtros e paginação por HTTP com banco simulado. Persistência real e execução das consultas SQL ainda precisam ser verificadas com PostgreSQL.

@@ -1,9 +1,14 @@
+import { Navigate, Route, Routes } from 'react-router-dom';
+import Login from './components/Login.jsx';
+import Cadastro from './components/Cadastro.jsx';
+import Inicio from './components/Inicio.jsx';
+import RotaProtegida from './components/RotaProtegida.jsx';
+
 export default function App() {
-  return (
-    <main>
-      <h1>Controle financeiro pessoal</h1>
-      <p>Estrutura inicial do projeto ExpressJS e ReactJS.</p>
-      <p>Cadastro, lançamentos e relatórios serão implementados nas próximas etapas.</p>
-    </main>
-  );
+  return <Routes>
+    <Route path="/login" element={<Login />} />
+    <Route path="/cadastro" element={<Cadastro />} />
+    <Route path="/" element={<RotaProtegida><Inicio /></RotaProtegida>} />
+    <Route path="*" element={<Navigate to="/" replace />} />
+  </Routes>;
 }

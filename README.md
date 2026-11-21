@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 04 — Login e autenticação
+## Etapa 05 — Telas e sessão autenticada
 
-Servidor Express, tela inicial React/Vite, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. As funcionalidades financeiras serão implementadas nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. As funcionalidades financeiras serão implementadas nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -55,7 +55,7 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 | 01 | Felippe | Estrutura inicial — concluída |
 | 02 | Felippe | PostgreSQL: tabelas, restrições, pool e scripts — concluída |
 | 03 | Felippe | Cadastro, validações e dados padrão — concluída |
-| 04 | Felippe | Login JWT, isolamento e limitação de tentativas |
+| 04 | Felippe | Login JWT, identidade pelo token e limitação de tentativas — concluída |
 | 05 | Felippe | Telas de autenticação, contexto e rotas protegidas |
 | 06 | Felippe | CRUD de categorias: API e interface |
 | 07 | Felippe | CRUD de fontes e destinos: API e interface |
@@ -162,6 +162,37 @@ O token usa HS256 e expira em uma hora. Envie `Authorization: Bearer <token>` ao
 
 O login aceita até dez requisições por endereço IP a cada quinze minutos; a seguinte retorna 429 com mensagem e cabeçalho Retry-After. Esse contador é mantido em memória e reinicia com o servidor. A configuração atual corresponde à execução local, sem proxy intermediário.
 
-O middleware de autenticação será aplicado às rotas financeiras quando elas forem criadas. O isolamento completo dos registros será validado nessas etapas. Logout e retorno ao login após expiração serão implementados no frontend na etapa 05; o logout descartará o token no cliente.
+O middleware de autenticação será aplicado às rotas financeiras quando elas forem criadas. O isolamento completo dos registros será validado nessas etapas. O frontend descarta o token no logout e retorna ao login quando ele expira ou uma requisição autenticada recebe 401.
 
 Os testes de autenticação fazem HTTP local com banco simulado: verificam login, expiração, assinatura e algoritmo, identificação pelo token, rejeição de credenciais e limitação de tentativas. Execute `npm test` dentro de `backend`. A validação com PostgreSQL real permanece pendente.
+
+## Interface de cadastro, login e sessão
+
+Com o banco preparado e a API em execução, inicie o frontend com `npm run dev`. As rotas disponíveis são:
+
+| Caminho | Tela |
+|---|---|
+| `/cadastro` | Cadastro com validação, máscara de CPF e erros junto aos campos |
+| `/login` | Login com estado de envio, erros e confirmação após cadastro |
+| `/` | Página inicial protegida com identificação do usuário e botão Sair |
+
+A página inicial ainda não é o dashboard financeiro da etapa 16. Após cadastrar, entre com as credenciais criadas. Nesta etapa não há usuários de demonstração pré-carregados.
+
+O cliente Axios fica em `frontend/src/services/api.js` e usa `http://localhost:3000/api` por padrão. Para mudar o endereço, copie `frontend/.env.example` para `frontend/.env`, ajuste VITE_API_URL e reinicie o Vite. As chamadas vão diretamente à API, sem proxy do Vite. Se mudar a origem do frontend, ajuste também FRONTEND_ORIGIN no backend.
+
+AuthContext fornece usuário, token, cadastro, login e logout. Somente o token é persistido no localStorage; ao recarregar, os dados do usuário são consultados em `/api/auth/me`. A rota protegida mostra o carregamento da sessão, permite tentar novamente em falhas temporárias e redireciona visitantes sem sessão para o login.
+
+O cliente HTTP adiciona Authorization automaticamente. Respostas 401 de requisições autenticadas encerram a sessão, exceto no próprio login. Respostas de uma sessão antiga não apagam um token novo. A expiração também é acompanhada por um temporizador para retornar ao login sem exigir nova interação. A leitura local da validade não substitui a verificação da assinatura pela API.
+
+O logout remove o token do navegador; ele não revoga um JWT já emitido no servidor, que permanece válido até expirar. A proteção visual das rotas não substitui a autorização no backend.
+
+### Verificações desta etapa
+
+Dentro de `frontend`:
+
+```powershell
+npm test
+npm run build
+```
+
+Os testes cobrem o cliente HTTP e a leitura da validade do token, com armazenamento e respostas simulados. A compilação verifica a integração dos componentes. A navegação visual e o fluxo completo de cadastro/login com PostgreSQL real ainda precisam ser validados em execução.

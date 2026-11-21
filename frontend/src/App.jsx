@@ -3,6 +3,7 @@ import Login from './components/Login.jsx';
 import Cadastro from './components/Cadastro.jsx';
 import Inicio from './components/Inicio.jsx';
 import Categorias from './components/Categorias.jsx';
+import Lancamentos from './components/Lancamentos.jsx';
 import FontesDestinos from './components/FontesDestinos.jsx';
 import LayoutAutenticado from './components/LayoutAutenticado.jsx';
 import RotaProtegida from './components/RotaProtegida.jsx';
@@ -14,6 +15,7 @@ export default function App() {
     <Route element={<RotaProtegida><LayoutAutenticado /></RotaProtegida>}>
       <Route path="/" element={<Inicio />} />
       <Route path="/categorias" element={<Categorias />} />
+      <Route path="/lancamentos" element={<Lancamentos />} />
       <Route path="/fontes-destinos" element={<FontesDestinos />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />

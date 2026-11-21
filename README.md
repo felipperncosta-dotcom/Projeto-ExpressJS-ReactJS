@@ -4,9 +4,9 @@ Aplicação acadêmica de controle financeiro pessoal. Esta nova implementação
 
 Enunciado: https://costasilvati.github.io/fullStack/projeto-2.html
 
-## Etapa 09 — Parcelamento, edição e exclusão
+## Etapa 10 — Base de cadastros e lançamentos
 
-Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. A API permite criar, consultar, editar e excluir lançamentos, inclusive compras parceladas. A tela de lançamentos e os relatórios serão implementados nas próximas etapas. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
+Servidor Express, telas React de cadastro/login, schema PostgreSQL, pool de conexões e cadastro de usuários na API. Login JWT e consulta do usuário autenticado estão disponíveis. O CRUD de categorias está disponível na API e no frontend. Contas, rendas e cartões também podem ser gerenciados. A API permite criar, consultar, editar e excluir lançamentos, inclusive compras parceladas. A tela de lançamentos está disponível. Relatórios, faturas, dashboard e saúde financeira serão implementados nas etapas 11 a 20. As dependências previstas já estão declaradas, mas não representam funcionalidades prontas.
 
 ## Executar
 
@@ -60,8 +60,8 @@ O responsável de cada etapa deve participar efetivamente da implementação ou 
 | 06 | Felippe | CRUD de categorias: API e interface — concluída |
 | 07 | Felippe | CRUD de fontes e destinos: API e interface — concluída |
 | 08 | Felippe | API de lançamentos, filtros, paginação e totais — concluída |
-| 09 | Felippe | Parcelamento, transação, edição e exclusão |
-| 10 | Felippe | Tela de lançamentos, testes e instruções de continuidade |
+| 09 | Felippe | Parcelamento, transação, edição e exclusão — concluída |
+| 10 | Felippe | Tela de lançamentos, testes e instruções de continuidade — concluída |
 | 11 | Rafael | API de relatórios por categoria |
 | 12 | Rafael | Tela por categoria, incluindo redução a zero |
 | 13 | Rafael | Relatório por fonte/destino com tabelas e gráficos |
@@ -250,7 +250,7 @@ A tela confirma a exclusão, bloqueia ações durante o envio e distingue lista 
 
 ## Lançamentos simples — API
 
-Todas as rotas exigem token. A tela será implementada na etapa 10. Parcelamento, edição e exclusão estão documentados abaixo.
+Todas as rotas exigem token. A tela está disponível em `/lancamentos`. Parcelamento, edição e exclusão estão documentados abaixo.
 
 | Método | Rota | Finalidade |
 |---|---|---|
@@ -305,8 +305,28 @@ As parcelas guardam a data original da compra. Portanto, a listagem e os totais 
 
 O PUT recebe tipo, descrição, valor, data, categoria e fonte/destino com as mesmas validações de criação. Na edição, valor significa o valor do lançamento/parcela selecionado. A quantidade de parcelas não pode mudar; se omitida, mantém-se a quantidade existente. O grupo e o número da parcela também são preservados. Para uma parcela de compra parcelada, a fonte/destino precisa continuar sendo um cartão do usuário.
 
-Alterar uma parcela não redistribui os valores das demais. Excluir uma parcela não renumera as restantes. Excluir com todasParcelas=true em um lançamento sem grupo remove apenas esse lançamento. O parâmetro aceita somente true ou false. A confirmação e a escolha entre exclusão individual e do grupo serão incluídas na tela da etapa 10.
+Alterar uma parcela não redistribui os valores das demais. Excluir uma parcela não renumera as restantes. Excluir com todasParcelas=true em um lançamento sem grupo remove apenas esse lançamento. O parâmetro aceita somente true ou false. A tela pede confirmação e oferece exclusão individual ou do grupo para compras parceladas.
 
 Editar/excluir registros inexistentes ou de terceiros retorna 404; relações incompatíveis e tentativas de mudar a quantidade retornam 400. Todas as alterações e exclusões filtram pelo usuário do token.
 
 Os testes cobrem soma exata de centavos para 1 a 48 parcelas, sobra na primeira, validações, uso da mesma conexão para as inserções, COMMIT/ROLLBACK, liberação da conexão, edição individual, preservação de metadados e exclusão individual/do grupo. As consultas são simuladas; a atomicidade e a persistência reais ainda precisam de validação em PostgreSQL.
+
+## Tela de lançamentos
+
+Acesse **Lançamentos** no menu após o login. O período inicial é o mês corrente. Você pode filtrar por datas, tipo, categoria e fonte/destino e navegar em páginas de dez registros. Entradas, saídas e saldo vêm dos totais da API para todos os registros filtrados.
+
+Em Novo lançamento, selecione os cadastros compatíveis com entrada ou saída. Compras parceladas exigem cartão e usam o valor total da compra. Ao editar, o valor é somente do lançamento/parcela selecionado; a quantidade de parcelas permanece fixa. A tela restringe parcelas já existentes a cartões e conserva sua natureza de saída.
+
+Os diálogos usam o elemento nativo dialog, com foco modal e fechamento por Escape quando nenhuma operação está em andamento. Ações ficam desabilitadas durante o envio. A exclusão exige confirmação e oferece Só esta parcela ou Todas as parcelas quando aplicável. Após remover o último item de uma página, a listagem retorna a uma página válida.
+
+Erros de formulário aparecem junto aos campos; falhas de API aparecem no diálogo ativo. Carregamento, lista vazia e erros de consulta têm estados separados. Respostas antigas não substituem o resultado de um filtro mais recente.
+
+## Situação ao concluir as dez primeiras etapas
+
+- Backend: 49 testes passaram, incluindo HTTP com consultas de banco simuladas.
+- Frontend: 10 testes passaram, cobrindo sessão, cliente HTTP, formatos monetários e validação do formulário.
+- Compilação de produção do frontend: passou.
+- PostgreSQL real, fluxo completo no navegador e concorrência: ainda não validados neste ambiente.
+- Relatórios, faturas, dashboard financeiro, saúde financeira e seed de demonstração: ainda não implementados nesta nova versão.
+
+Consulte `CONTINUIDADE_RAFAEL.md` para a sequência das etapas 11 a 20, correções obrigatórias e roteiro de validação. Os testes atuais não substituem a execução integrada com PostgreSQL.

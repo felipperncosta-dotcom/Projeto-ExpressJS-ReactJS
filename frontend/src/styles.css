@@ -79,3 +79,17 @@ th { font-size: .875rem; }
 .check-control input { width: auto; }
 td small { display: block; color: #50645b; font-size: .875rem; }
 @media (max-width: 760px) { .form-row-three { grid-template-columns: 1fr; } }
+.filter-panel { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.summary-strip { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1rem 1.5rem; border: 1px solid #c4d4ca; border-radius: .75rem; margin-bottom: 1.5rem; background: #e6efe9; }
+.summary-strip strong { display: block; font-size: 1.4rem; }
+.positive { color: #245d46; }
+.negative { color: #a42c2c; }
+.pagination, .modal-actions, .quick-links { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1.5rem; }
+.pagination { justify-content: space-between; }
+.modal-card { width: min(44rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; margin: auto; border: 1px solid #c4d4ca; border-radius: 1rem; padding: 1.5rem; color: #203a30; background: #fff; }
+.modal-card::backdrop { background: rgb(17 40 29 / .65); }
+.modal-card .form-control { margin-bottom: .75rem; }
+.modal-card .modal-actions { justify-content: flex-end; }
+.button-danger { background: #a42c2c; border-color: #a42c2c; color: white; }
+@media (max-width: 900px) { .filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .filter-panel { grid-template-columns: 1fr; } }

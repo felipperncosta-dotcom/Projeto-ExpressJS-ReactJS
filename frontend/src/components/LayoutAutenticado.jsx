@@ -8,6 +8,7 @@ export default function LayoutAutenticado() {
       <NavLink to="/" className="brand">clareza<span>.</span></NavLink>
       <nav aria-label="Navegação principal">
         <NavLink to="/" end>Início</NavLink>
+        <NavLink to="/lancamentos">Lançamentos</NavLink>
         <NavLink to="/categorias">Categorias</NavLink>
         <NavLink to="/fontes-destinos">Contas e cartões</NavLink>
       </nav>

@@ -17,7 +17,7 @@ export default function SaudeFinanceira() {
     return () => { ativo = false; };
   }, [tentativa]);
 
-  if (erro) return <section className="page-content"><div className="alert" role="alert">{erro} <button className="button" onClick={() => { setErro('); setDados(null); setTentativa((valor) => valor + 1); }}>Tentar novamente</button></div></section>;
+  if (erro) return <section className="page-content"><div className="alert" role="alert">{erro} <button className="button" onClick={() => { setErro(''); setDados(null); setTentativa((valor) => valor + 1); }}>Tentar novamente</button></div></section>;
   if (!dados) return <section className="page-content"><div className="state-card">Calculando seus indicadores…</div></section>;
   const { indicadores: i, projecao, dicas } = dados;
   const indicadores = [
@@ -41,4 +41,5 @@ export default function SaudeFinanceira() {
     </section>
   </section>;
 }
+
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middlewares/erros.js';
 import { autenticar } from '../middlewares/autenticar.js';
-import { relatorioCategorias } from '../models/relatorioModel.js';
+import { relatorioCategorias, relatorioFontesDestinos } from '../models/relatorioModel.js';
 
 const router = Router();
 router.use(autenticar);
@@ -22,8 +22,8 @@ function periodoDaRequisicao(query) {
   const agora = new Date();
   const ano = agora.getFullYear();
   const mes = agora.getMonth();
-  const inicioPadrao = `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
-  const fimPadrao = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(new Date(ano, mes + 1, 0).getDate()).padStart(2, '0')}`;
+  const inicioPadrao = new Date(Date.UTC(ano, mes, 1)).toISOString().slice(0, 10);
+  const fimPadrao = new Date(Date.UTC(ano, mes + 1, 0)).toISOString().slice(0, 10);
   const inicio = query.inicio || inicioPadrao;
   const fim = query.fim || fimPadrao;
   const campos = {};
@@ -32,13 +32,25 @@ function periodoDaRequisicao(query) {
   if (dataValida(inicio) && dataValida(fim) && inicio > fim) campos.fim = 'A data final deve ser igual ou posterior à inicial.';
   if (Object.keys(campos).length) return { campos };
   const dias = Math.round((Date.parse(`${fim}T00:00:00Z`) - Date.parse(`${inicio}T00:00:00Z`)) / 86400000) + 1;
-  return { periodo: { inicio, fim, anteriorFim: somarDias(inicio, -1), anteriorInicio: somarDias(inicio, -dias) } };
+  return {
+    periodo: {
+      inicio, fim,
+      anteriorFim: somarDias(inicio, -1),
+      anteriorInicio: somarDias(inicio, -dias),
+    },
+  };
 }
 
 router.get('/categorias', asyncHandler(async (req, res) => {
   const { periodo, campos } = periodoDaRequisicao(req.query);
   if (campos) return res.status(400).json({ erro: 'Revise o período informado.', campos });
   return res.json(await relatorioCategorias(req.usuarioId, periodo));
+}));
+
+router.get('/fontes-destinos', asyncHandler(async (req, res) => {
+  const { periodo, campos } = periodoDaRequisicao(req.query);
+  if (campos) return res.status(400).json({ erro: 'Revise o período informado.', campos });
+  return res.json(await relatorioFontesDestinos(req.usuarioId, periodo));
 }));
 
 export default router;

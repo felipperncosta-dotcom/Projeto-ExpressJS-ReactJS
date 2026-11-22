@@ -7,6 +7,8 @@ import authRoutes from './routes/auth.routes.js';
 import categoriasRoutes from './routes/categorias.routes.js';
 import fontesDestinosRoutes from './routes/fontesDestinos.routes.js';
 import lancamentosRoutes from './routes/lancamentos.routes.js';
+import relatoriosRoutes from './routes/relatorios.routes.js';
+import saudeFinanceiraRoutes from './routes/saudeFinanceira.routes.js';
 import { errorHandler, notFound } from './middlewares/erros.js';
 
 export const app = express();
@@ -16,6 +18,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/categorias', categoriasRoutes);
 app.use('/api/fontes-destinos', fontesDestinosRoutes);
 app.use('/api/lancamentos', lancamentosRoutes);
+app.use('/api/relatorios', relatoriosRoutes);
+app.use('/api/saude-financeira', saudeFinanceiraRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

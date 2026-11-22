@@ -11,6 +11,9 @@ export default function LayoutAutenticado() {
         <NavLink to="/lancamentos">Lançamentos</NavLink>
         <NavLink to="/categorias">Categorias</NavLink>
         <NavLink to="/fontes-destinos">Contas e cartões</NavLink>
+        <NavLink to="/relatorios">Relatórios</NavLink>
+        <NavLink to="/faturas">Faturas</NavLink>
+        <NavLink to="/saude-financeira">Saúde financeira</NavLink>
       </nav>
       <button className="button" onClick={logout}>Sair</button>
     </header>

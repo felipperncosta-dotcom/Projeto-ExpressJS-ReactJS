@@ -7,6 +7,9 @@ import Lancamentos from './components/Lancamentos.jsx';
 import FontesDestinos from './components/FontesDestinos.jsx';
 import LayoutAutenticado from './components/LayoutAutenticado.jsx';
 import RotaProtegida from './components/RotaProtegida.jsx';
+import Relatorios from './components/Relatorios.jsx';
+import Faturas from './components/Faturas.jsx';
+import SaudeFinanceira from './components/SaudeFinanceira.jsx';
 
 export default function App() {
   return <Routes>
@@ -17,6 +20,9 @@ export default function App() {
       <Route path="/categorias" element={<Categorias />} />
       <Route path="/lancamentos" element={<Lancamentos />} />
       <Route path="/fontes-destinos" element={<FontesDestinos />} />
+      <Route path="/relatorios" element={<Relatorios />} />
+      <Route path="/faturas" element={<Faturas />} />
+      <Route path="/saude-financeira" element={<SaudeFinanceira />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>;

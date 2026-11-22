@@ -21,12 +21,14 @@ Aplicação web para controle financeiro pessoal, desenvolvida com React, Expres
    cd backend
    Copy-Item .env.example .env
    npm ci
+   # Gere um segredo e substitua JWT_SECRET no .env antes de iniciar:
+   node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
    npm run db:schema
    npm run db:seed
    npm run dev
    ```
 
-   O servidor fica em `http://localhost:3000`. O arquivo `.env.example` usa a conexão local do Compose. Troque `JWT_SECRET` por um segredo aleatório longo antes de usar fora da demonstração. Não publique o arquivo `.env`.
+   O servidor fica em `http://localhost:3000`. O arquivo `.env.example` usa a conexão local do Compose. Substitua `JWT_SECRET` pelo segredo gerado, inclusive na demonstração: o servidor rejeita o valor de exemplo. Não publique o arquivo `.env`.
 
 3. Em outro terminal, na pasta `frontend`:
 
@@ -45,6 +47,8 @@ Depois de carregar o seed, use uma destas contas:
 | --- | --- |
 | `marina@financas.test` | `Marina1234` |
 | `rafael@financas.test` | `Rafael1234` |
+
+**Atenção: o seed executa TRUNCATE e apaga todos os usuários e lançamentos da base configurada. Use somente uma base local descartável.**
 
 O seed é destinado a uma base local limpa de demonstração e deve ser executado uma vez. Ele cria duas contas próprias para os dados de exemplo; se quiser recriar a base, remova e prepare novamente o volume local do PostgreSQL antes de executar o seed.
 

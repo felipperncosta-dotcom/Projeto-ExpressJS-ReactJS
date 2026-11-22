@@ -3,7 +3,7 @@ import { calcularFatura } from './utilitarios.js';
 
 function cents(valor) {
   const [inteiro, decimal = '00'] = String(valor ?? '0').split('.');
-  return Number(inteiro) * 100 + Number(decimal.padEnd(2, '0').slice(0, 2));
+  return (String(valor).startsWith('-') ? -1 : 1) * (Math.abs(Number(inteiro)) * 100 + Number(decimal.padEnd(2, '0').slice(0, 2)));
 }
 
 function decimal(centavos) {

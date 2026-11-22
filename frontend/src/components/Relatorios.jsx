@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api.js';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { moeda } from './formatos.js';
+import { dataBrasileira, moeda } from './formatos.js';
 
 function periodoPadrao() {
   const hoje = new Date();
@@ -42,10 +42,10 @@ export default function Relatorios() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const saidasComGasto = categorias?.categoriasSaida?.filter((item) => Number(item.total) > 0 || Number(item.totalAnterior) > 0) ?? [];
+  const saidasComGasto = categorias?.categoriasSaida?.map(item => ({ ...item, total: Number(item.total) })).filter((item) => Number(item.total) > 0 || Number(item.totalAnterior) > 0) ?? [];
   const entradasComValor = categorias?.categoriasEntrada?.filter((item) => Number(item.total) > 0 || Number(item.totalAnterior) > 0) ?? [];
-  const fontesComEntrada = fontes?.entradasPorFonte ?? [];
-  const destinosComSaida = fontes?.saidasPorDestino ?? [];
+  const fontesComEntrada = (fontes?.entradasPorFonte ?? []).map(item => ({ ...item, entradas: Number(item.entradas) }));
+  const destinosComSaida = (fontes?.saidasPorDestino ?? []).map(item => ({ ...item, saidas: Number(item.saidas) }));
 
   return (
     <section className="page-content">
@@ -73,7 +73,7 @@ export default function Relatorios() {
           </section>
         </div>
         <section className="panel-card">
-          <div className="section-heading"><div><span className="eyebrow">DETALHAMENTO</span><h2>Categorias de saída</h2></div><small>{categorias.periodo.inicio} a {categorias.periodo.fim}</small></div>
+          <div className="section-heading"><div><span className="eyebrow">DETALHAMENTO</span><h2>Categorias de saída</h2></div><small>{dataBrasileira(categorias.periodo.inicio)} a {dataBrasileira(categorias.periodo.fim)}</small></div>
           {!saidasComGasto.length ? <div className="empty-state"><p>Não há saídas por categoria neste período.</p></div> : <div className="table-wrap"><table><thead><tr><th>Categoria</th><th>Total atual</th><th>% das saídas</th><th>Período anterior</th><th>Variação</th></tr></thead><tbody>{saidasComGasto.map((item) => <tr key={item.id}><td><strong>{item.nome}</strong></td><td>{moeda.format(Number(item.total))}</td><td>{item.percentual.toFixed(2)}%</td><td>{moeda.format(Number(item.totalAnterior))}</td><td><IndicadorTendencia item={item} /></td></tr>)}</tbody></table></div>}
         </section>
         <div className="report-grid">
@@ -82,12 +82,12 @@ export default function Relatorios() {
             {!entradasComValor.length ? <div className="empty-state"><p>Não há entradas neste período.</p></div> : <div className="table-wrap"><table><thead><tr><th>Categoria</th><th>Total</th><th>Anterior</th></tr></thead><tbody>{entradasComValor.map((item) => <tr key={item.id}><td><strong>{item.nome}</strong></td><td className="positive">{moeda.format(Number(item.total))}</td><td>{moeda.format(Number(item.totalAnterior))}</td></tr>)}</tbody></table></div>}
           </section>
           <section className="panel-card">
-            <div className="section-heading"><div><span className="eyebrow">FONTES DE RENDA</span><h2>Entradas por fonte</h2></div></div>
+            <div className="section-heading"><div><span className="eyebrow">FONTES DE RENDA</span><h2>Entradas por fonte</h2></div></div><div className="table-wrap"><table><thead><tr><th>Fonte/destino</th><th>Total</th></tr></thead><tbody>{fontesComEntrada.map(item => <tr key={item.id}><td>{item.nome}</td><td>{moeda.format(Number(item.entradas))}</td></tr>)}</tbody></table></div>
             {!fontesComEntrada.length ? <div className="empty-state"><p>Não há entradas por fonte neste período.</p></div> : <ResponsiveContainer width="100%" height={230}><BarChart data={fontesComEntrada} margin={{ top: 8, right: 12, bottom: 10, left: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="nome" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(valor) => moeda.format(Number(valor))} /><Bar dataKey="entradas" name="Entradas" fill="#478366" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer>}
           </section>
         </div>
         <section className="panel-card">
-          <div className="section-heading"><div><span className="eyebrow">DESTINOS</span><h2>Saídas por conta e cartão</h2></div></div>
+          <div className="section-heading"><div><span className="eyebrow">DESTINOS</span><h2>Saídas por conta e cartão</h2></div></div><div className="table-wrap"><table><thead><tr><th>Fonte/destino</th><th>Total</th></tr></thead><tbody>{destinosComSaida.map(item => <tr key={item.id}><td>{item.nome}</td><td>{moeda.format(Number(item.saidas))}</td></tr>)}</tbody></table></div>
           {!destinosComSaida.length ? <div className="empty-state"><p>Não há saídas por destino neste período.</p></div> : <div className="chart-block"><ResponsiveContainer width="100%" height={260}><BarChart data={destinosComSaida} margin={{ top: 8, right: 16, bottom: 10, left: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="nome" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} /><Tooltip formatter={(valor) => moeda.format(Number(valor))} /><Bar dataKey="saidas" name="Saídas" fill="#c87968" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer></div>}
         </section>
         <section className="panel-card">

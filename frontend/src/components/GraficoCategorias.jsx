@@ -4,7 +4,7 @@ import { moeda } from './formatos.js';
 const cores = ['#28614f', '#7ea980', '#d4a56c', '#9e7864', '#8399a0'];
 
 export default function GraficoCategorias({ categorias }) {
-  const comGastos = categorias.filter((item) => Number(item.total) > 0);
+  const comGastos = categorias.map(item => ({ ...item, total: Number(item.total) })).filter((item) => Number(item.total) > 0);
   return (
     <div className="mini-chart-layout">
       <div className="mini-pie"><ResponsiveContainer width="100%" height="100%"><PieChart>

@@ -3,7 +3,7 @@ import { relatorioFaturas } from './relatorioModel.js';
 
 function cents(valor) {
   const [inteiro, decimal = '00'] = String(valor ?? '0').split('.');
-  return Number(inteiro) * 100 + Number(decimal.padEnd(2, '0').slice(0, 2));
+  return (String(valor).startsWith('-') ? -1 : 1) * (Math.abs(Number(inteiro)) * 100 + Number(decimal.padEnd(2, '0').slice(0, 2)));
 }
 
 function reais(centavos) {
@@ -27,7 +27,7 @@ export async function obterSaudeFinanceira(usuarioId) {
     `SELECT TO_CHAR(calendario.mes, 'YYYY-MM') AS mes,
        COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'entrada'), 0)::numeric(12,2) AS entradas,
        COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'saida'), 0)::numeric(12,2) AS saidas,
-       COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'saida' AND f.tipo <> 'cartao_credito'), 0)::numeric(12,2) AS saidasSemCartao
+       COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'saida' AND f.tipo <> 'cartao_credito'), 0)::numeric(12,2) AS "saidasSemCartao"
      FROM generate_series(
        date_trunc('month', CURRENT_DATE) - INTERVAL '2 months',
        date_trunc('month', CURRENT_DATE), INTERVAL '1 month'
@@ -51,7 +51,7 @@ export async function obterSaudeFinanceira(usuarioId) {
   const saldo = await pool.query(
     `SELECT
        COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'entrada'), 0)::numeric(12,2) AS entradas,
-       COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'saida' AND f.tipo <> 'cartao_credito'), 0)::numeric(12,2) AS saidasSemCartao
+       COALESCE(SUM(l.valor) FILTER (WHERE l.tipo = 'saida' AND f.tipo <> 'cartao_credito'), 0)::numeric(12,2) AS "saidasSemCartao"
      FROM lancamentos l
      JOIN fontes_destinos f ON f.id = l.fonte_destino_id AND f.usuario_id = l.usuario_id
      WHERE l.usuario_id = $1`,

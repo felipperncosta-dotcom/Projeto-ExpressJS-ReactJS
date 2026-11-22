@@ -6,7 +6,7 @@ export default function LayoutAutenticado() {
   return <main className="app-shell">
     <header className="app-header">
       <NavLink to="/" className="brand">clareza<span>.</span></NavLink>
-      <nav aria-label="Navegação principal">
+      <nav className="main-nav" aria-label="Navegação principal">
         <NavLink to="/" end>Início</NavLink>
         <NavLink to="/lancamentos">Lançamentos</NavLink>
         <NavLink to="/categorias">Categorias</NavLink>

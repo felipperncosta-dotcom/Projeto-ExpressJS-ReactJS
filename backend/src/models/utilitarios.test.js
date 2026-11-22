@@ -36,6 +36,6 @@ test('ajusta fechamento no dia 31 ao último dia de fevereiro', () => {
 test('divide centavos com a sobra na primeira parcela', () => {
   assert.deepEqual(dividirParcelas('100.00', 3), [3334, 3333, 3333]);
   assert.deepEqual(dividirParcelas(10, 4), [250, 250, 250, 250]);
-  assert.deepEqual(dividirParcelas('12,34', 2), [617, 617]);
+  assert.throws(() => dividirParcelas('12,34', 2));
   assert.equal(dividirParcelas('100.00', 3).reduce((soma, v) => soma + v, 0), 10000);
 });

@@ -60,14 +60,18 @@ export function calcularFatura(dataCompra, cartao, numeroParcela = 1) {
 export function valorEmCentavos(valor) {
   let totalCentavos;
   if (typeof valor === 'number') {
-    totalCentavos = Math.round(valor * 100);
+    const arredondado = Math.round(valor * 100);
+    if (!Number.isFinite(valor) || Math.abs(valor * 100 - arredondado) > 1e-7) {
+      throw new TypeError('Valor deve ter no máximo duas casas decimais.');
+    }
+    totalCentavos = arredondado;
   } else {
-    const texto = String(valor).trim().replace(',', '.');
+    const texto = String(valor).trim();
     const partes = texto.match(/^(\d+)(?:\.(\d{1,2}))?$/);
     if (!partes) throw new TypeError('Valor deve ter no máximo duas casas decimais.');
     totalCentavos = Number(partes[1]) * 100 + Number((partes[2] ?? '').padEnd(2, '0'));
   }
-  if (!Number.isSafeInteger(totalCentavos) || totalCentavos <= 0) {
+  if (!Number.isSafeInteger(totalCentavos) || totalCentavos <= 0 || totalCentavos > 999999999999) {
     throw new TypeError('Valor precisa ser positivo e caber em centavos inteiros.');
   }
   return totalCentavos;

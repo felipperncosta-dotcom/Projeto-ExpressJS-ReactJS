@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Login from './components/Login.jsx';
 import Cadastro from './components/Cadastro.jsx';
-import Inicio from './components/Inicio.jsx';
+import Painel from './components/Painel.jsx';
 import Categorias from './components/Categorias.jsx';
 import Lancamentos from './components/Lancamentos.jsx';
 import FontesDestinos from './components/FontesDestinos.jsx';
@@ -16,7 +16,7 @@ export default function App() {
     <Route path="/login" element={<Login />} />
     <Route path="/cadastro" element={<Cadastro />} />
     <Route element={<RotaProtegida><LayoutAutenticado /></RotaProtegida>}>
-      <Route path="/" element={<Inicio />} />
+      <Route path="/" element={<Painel />} />
       <Route path="/categorias" element={<Categorias />} />
       <Route path="/lancamentos" element={<Lancamentos />} />
       <Route path="/fontes-destinos" element={<FontesDestinos />} />

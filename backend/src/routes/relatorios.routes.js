@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../middlewares/erros.js';
 import { autenticar } from '../middlewares/autenticar.js';
-import { relatorioCategorias, relatorioFontesDestinos } from '../models/relatorioModel.js';
+import { relatorioCategorias, relatorioFontesDestinos, relatorioFaturas } from '../models/relatorioModel.js';
 
 const router = Router();
 router.use(autenticar);
@@ -51,6 +51,14 @@ router.get('/fontes-destinos', asyncHandler(async (req, res) => {
   const { periodo, campos } = periodoDaRequisicao(req.query);
   if (campos) return res.status(400).json({ erro: 'Revise o período informado.', campos });
   return res.json(await relatorioFontesDestinos(req.usuarioId, periodo));
+}));
+
+router.get('/faturas', asyncHandler(async (req, res) => {
+  const informado = req.query.meses === undefined ? 3 : Number(req.query.meses);
+  if (!Number.isInteger(informado) || informado < 1 || informado > 12) {
+    return res.status(400).json({ erro: 'O número de faturas deve ser um inteiro entre 1 e 12.', campos: { meses: 'Use um inteiro de 1 a 12.' } });
+  }
+  return res.json(await relatorioFaturas(req.usuarioId, Math.max(3, informado)));
 }));
 
 export default router;

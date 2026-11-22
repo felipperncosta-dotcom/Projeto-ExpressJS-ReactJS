@@ -91,3 +91,104 @@ export async function relatorioFontesDestinos(usuarioId, periodo) {
   };
 }
 
+function dataIsoLocal() {
+  const data = new Date();
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+}
+
+export async function relatorioFaturas(usuarioId, quantidadeProximas = 3) {
+  const hoje = dataIsoLocal();
+  const { rows: cartoes } = await pool.query(
+    `SELECT id, nome, dia_fechamento, dia_vencimento, limite
+     FROM fontes_destinos WHERE usuario_id = $1 AND tipo = 'cartao_credito' ORDER BY nome`,
+    [usuarioId],
+  );
+  if (!cartoes.length) return { geradoEm: hoje, cartoes: [] };
+
+  const { rows: lancamentos } = await pool.query(
+    `SELECT l.id, l.descricao, l.valor, to_char(l.data, 'YYYY-MM-DD') AS data,
+       l.fonte_destino_id, l.parcela_atual, l.total_parcelas
+     FROM lancamentos l
+     JOIN fontes_destinos f ON f.id = l.fonte_destino_id AND f.usuario_id = l.usuario_id
+     WHERE l.usuario_id = $1 AND l.tipo = 'saida' AND f.tipo = 'cartao_credito'
+     ORDER BY l.data, l.id`,
+    [usuarioId],
+  );
+
+  const mapeados = lancamentos.map((lancamento) => ({
+    ...lancamento,
+    datasFatura: calcularFatura(lancamento.data, {
+      diaFechamento: cartoes.find((cartao) => cartao.id === lancamento.fonte_destino_id).dia_fechamento,
+      diaVencimento: cartoes.find((cartao) => cartao.id === lancamento.fonte_destino_id).dia_vencimento,
+    }, lancamento.parcela_atual),
+  }));
+  // A data calculada define o grupo; o PostgreSQL soma cada fatura e o limite futuro.
+  const agregados = await pool.query(
+    `SELECT cartao_id, referencia,
+       SUM(valor)::numeric(12,2) AS total,
+       COALESCE(SUM(valor) FILTER (WHERE vencimento >= $5::date), 0)::numeric(12,2) AS ainda_nao_vencido
+     FROM UNNEST($1::integer[], $2::text[], $3::date[], $4::numeric[])
+       AS m(cartao_id, referencia, vencimento, valor)
+     GROUP BY cartao_id, referencia`,
+    [
+      mapeados.map((item) => item.fonte_destino_id),
+      mapeados.map((item) => item.datasFatura.referencia),
+      mapeados.map((item) => item.datasFatura.vencimento),
+      mapeados.map((item) => item.valor),
+      hoje,
+    ],
+  );
+  const totaisFaturas = new Map(agregados.rows.map((item) => [
+    `${item.cartao_id}:${item.referencia}`, cents(item.total),
+  ]));
+  const limitePorCartao = new Map();
+  for (const item of agregados.rows) {
+    const anterior = limitePorCartao.get(item.cartao_id) ?? 0;
+    limitePorCartao.set(item.cartao_id, anterior + cents(item.ainda_nao_vencido));
+  }
+
+  return {
+    geradoEm: hoje,
+    cartoes: cartoes.map((cartao) => {
+      const config = { diaFechamento: cartao.dia_fechamento, diaVencimento: cartao.dia_vencimento };
+      const faturas = Array.from({ length: quantidadeProximas + 1 }, (_, indice) => {
+        const datas = calcularFatura(hoje, config, indice + 1);
+        return {
+          ...datas, aberta: indice === 0, itens: [],
+          totalCentavos: totaisFaturas.get(`${cartao.id}:${datas.referencia}`) ?? 0,
+        };
+      });
+      const porReferencia = new Map(faturas.map((fatura) => [fatura.referencia, fatura]));
+
+      // Cada parcela mantém a data da compra; o utilitário encontra sua fatura.
+      for (const lancamento of mapeados) {
+        if (lancamento.fonte_destino_id !== cartao.id) continue;
+        const valorCentavos = cents(lancamento.valor);
+        const fatura = porReferencia.get(lancamento.datasFatura.referencia);
+        if (!fatura) continue;
+        const descricaoParcela = lancamento.total_parcelas > 1
+          ? `${lancamento.descricao} — ${lancamento.parcela_atual}/${lancamento.total_parcelas}`
+          : lancamento.descricao;
+        fatura.itens.push({
+          id: lancamento.id, descricao: lancamento.descricao, descricaoParcela,
+          data: lancamento.data, valor: decimal(valorCentavos),
+          parcelaAtual: lancamento.parcela_atual, totalParcelas: lancamento.total_parcelas,
+        });
+      }
+
+      const limiteUtilizadoCentavos = limitePorCartao.get(cartao.id) ?? 0;
+      const limiteCentavos = cents(cartao.limite);
+      return {
+        id: cartao.id,
+        nome: cartao.nome,
+        diaFechamento: cartao.dia_fechamento,
+        diaVencimento: cartao.dia_vencimento,
+        limite: decimal(limiteCentavos),
+        limiteUtilizado: decimal(limiteUtilizadoCentavos),
+        limiteDisponivel: decimal(limiteCentavos - limiteUtilizadoCentavos),
+        percentualUtilizado: limiteCentavos ? Number(((limiteUtilizadoCentavos / limiteCentavos) * 100).toFixed(2)) : 0,
+        faturas: faturas.map(({ totalCentavos, ...fatura }) => ({ ...fatura, total: decimal(totalCentavos) })),
+      };
+    }),
+  };
+}

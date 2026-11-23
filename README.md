@@ -118,5 +118,7 @@ npm run build
 - `backend/tests`: testes integrados de API; os testes de cálculo ficam junto ao utilitário testado.
 - `frontend/src/components`: páginas e componentes React.
 
-O roteiro de apresentação foi preparado para Rafael e Felippe no chat e não faz parte do repositório.
+## Apresentação
+
+[Assistir à apresentação do projeto no Google Drive](https://drive.google.com/file/d/1GTwFDjJ9TepaN-Qu_oImVT7dsmXHw_0l/view?usp=drive_link)
 
